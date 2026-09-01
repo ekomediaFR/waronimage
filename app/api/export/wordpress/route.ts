@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   if (!site) return NextResponse.json({ error: "Site not found" }, { status: 404 });
   if (!site.wpAuthToken) {
     return NextResponse.json(
-      { error: "This site has no WordPress key. Install the War on Image Connect plugin and paste its API key in the WP Library tab." },
+      { error: "This site has no WordPress key. Connect it in the WP Library tab with the EkoSEO Bridge JUPITER key." },
       { status: 400 }
     );
   }

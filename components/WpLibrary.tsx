@@ -69,20 +69,20 @@ export function WpLibrary({ siteId, initialWpApiUrl }: { siteId: string; initial
       <div className="max-w-2xl space-y-4">
         <Card className="border-amber-800 bg-amber-950/30">
           <CardContent className="p-4 text-sm text-amber-300">
-            {dict.wpLib.notConnected}
+            {data.reason === "outdated" ? dict.wpLib.outdated : dict.wpLib.notConnected}
             {data.reason === "unreachable" && <span> {dict.wpLib.unreachable}</span>}
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>War on Image Connect</CardTitle>
+            <CardTitle>EkoSEO Bridge</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-zinc-300">
             <p>{dict.wpLib.intro}</p>
             <ol className="list-decimal space-y-2 pl-5">
               <li>
                 {dict.wpLib.step1}{" "}
-                <a href="/war-on-image-connect.zip" download className="font-medium text-amber-400 hover:underline">
+                <a href="/ekoseo-bridge-1.5.0.zip" download className="font-medium text-amber-400 hover:underline">
                   {dict.wpLib.download}
                 </a>
               </li>
@@ -93,7 +93,7 @@ export function WpLibrary({ siteId, initialWpApiUrl }: { siteId: string; initial
             <form onSubmit={saveConnection} className="space-y-3 pt-2">
               <div>
                 <Label>{dict.wpLib.keyLabel}</Label>
-                <Input required value={key} onChange={(e) => setKey(e.target.value)} placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+                <Input required value={key} onChange={(e) => setKey(e.target.value)} placeholder="xxxx xxxx xxxx xxxx xxxx xxxx" />
               </div>
               <div>
                 <Label>{dict.newSite.wpApiUrl}</Label>

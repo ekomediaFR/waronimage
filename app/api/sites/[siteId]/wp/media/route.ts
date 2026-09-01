@@ -23,7 +23,12 @@ export async function GET(req: NextRequest, { params }: Params) {
     const list = await listWpImages(site, page, 24);
     return NextResponse.json({ connected: true, info, ...list });
   } catch (err) {
-    return NextResponse.json({ connected: false, reason: "error", error: (err as Error).message });
+    const message = (err as Error).message;
+    // A bridge older than 1.5.0 answers /site but has no /media routes yet.
+    if (info.plugin === "ekoseo-bridge" && /HTTP 404/.test(message)) {
+      return NextResponse.json({ connected: false, reason: "outdated", info });
+    }
+    return NextResponse.json({ connected: false, reason: "error", error: message });
   }
 }
 
