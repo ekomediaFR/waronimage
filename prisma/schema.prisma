@@ -1,0 +1,129 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Site {
+  id          String       @id @default(cuid())
+  name        String
+  domain      String       @unique
+  sitemapUrl  String
+  brandColors Json         // { primary, secondary, accent }
+  fontStyle   String       @default("sans") // "serif" | "sans" | "mono"
+  logoUrl     String?
+  wpApiUrl    String?      // e.g. https://example.com/wp-json
+  wpAuthToken String?      // JWT or application password (Basic) token
+  createdAt   DateTime     @default(now())
+  pages       Page[]
+  stockImages StockImage[]
+}
+
+model Page {
+  id               String            @id @default(cuid())
+  siteId           String
+  site             Site              @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  url              String
+  slug             String
+  title            String
+  metaDesc         String?
+  cpt              String            @default("page") // "post" | "page" | "service" | "city" | "corridor"
+  niche            String            @default("other") // "moving" | "locksmith" | "plumbing" | "storage" | ...
+  city             String?
+  pageIntent       String            @default("landing") // "local-service" | "hub" | "corridor" | "faq" | ...
+  contentSummary   String?
+  embedding        Float[]
+  wpPostId         Int?
+  aiImages         AiImage[]
+  stockAssignments StockAssignment[]
+  updatedAt        DateTime          @updatedAt
+  createdAt        DateTime          @default(now())
+
+  @@unique([siteId, url])
+  @@index([siteId, niche])
+  @@index([siteId, cpt])
+}
+
+model ImageStyle {
+  id             String    @id @default(cuid())
+  name           String
+  description    String
+  exampleUrls    String[]
+  promptTemplate String
+  niches         String[]
+  formats        Json      // { ratio: "16:9", width: 1280, height: 720 }
+  aiImages       AiImage[]
+  createdAt      DateTime  @default(now())
+}
+
+model AiImage {
+  id           String     @id @default(cuid())
+  pageId       String
+  page         Page       @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  styleId      String
+  style        ImageStyle @relation(fields: [styleId], references: [id])
+  prompt       String
+  imageUrl     String
+  filename     String
+  altText      String
+  title        String
+  caption      String?
+  description  String?
+  matchScore   Float      @default(0)
+  status       String     @default("pending") // "pending" | "generated" | "approved" | "rejected"
+  variantIndex Int        @default(1)
+  exportedMediaId Int?
+  exportStatus String?    // "exported" | "failed"
+  createdAt    DateTime   @default(now())
+
+  @@index([pageId])
+  @@index([status])
+}
+
+model StockImage {
+  id           String            @id @default(cuid())
+  siteId       String
+  site         Site              @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  originalUrl  String
+  filename     String
+  altText      String?
+  title        String?
+  caption      String?
+  description  String?
+  niche        String?
+  cpt          String?
+  city         String?
+  tags         String[]
+  embedding    Float[]
+  analysisJson Json?
+  matchScore   Float?
+  quality      Int?
+  status       String            @default("unprocessed") // "unprocessed" | "analyzed" | "assigned" | "rejected"
+  assignments  StockAssignment[]
+  uploadedAt   DateTime          @default(now())
+
+  @@index([siteId, status])
+}
+
+model StockAssignment {
+  id              String     @id @default(cuid())
+  pageId          String
+  page            Page       @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  stockImageId    String
+  stockImage      StockImage @relation(fields: [stockImageId], references: [id], onDelete: Cascade)
+  matchScore      Float
+  assignedBy      String     @default("auto") // "auto" | "manual"
+  position        String     @default("thumbnail") // "thumbnail" | "hero" | "inline-1" | "inline-2"
+  altText         String
+  filename        String
+  approved        Boolean    @default(false)
+  exportedMediaId Int?
+  exportStatus    String?    // "exported" | "failed"
+  createdAt       DateTime   @default(now())
+
+  @@unique([pageId, stockImageId, position])
+  @@index([pageId])
+}
