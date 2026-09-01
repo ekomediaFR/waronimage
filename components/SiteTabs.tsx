@@ -3,19 +3,22 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-
-const TABS = [
-  { slug: "pages", label: "Pages" },
-  { slug: "ai-images", label: "AI Images" },
-  { slug: "stock", label: "Stock Photos" },
-  { slug: "export", label: "Export" },
-];
+import { useI18n } from "./LanguageProvider";
 
 export function SiteTabs({ siteId }: { siteId: string }) {
   const pathname = usePathname();
+  const { dict } = useI18n();
+
+  const tabs = [
+    { slug: "pages", label: dict.tabs.pages },
+    { slug: "ai-images", label: dict.tabs.ai },
+    { slug: "stock", label: dict.tabs.stock },
+    { slug: "export", label: dict.tabs.export },
+  ];
+
   return (
     <nav className="mb-5 flex gap-1 border-b border-zinc-800">
-      {TABS.map((tab) => {
+      {tabs.map((tab) => {
         const href = `/sites/${siteId}/${tab.slug}`;
         const active = pathname?.startsWith(href);
         return (

@@ -9,9 +9,12 @@ import { Button } from "@/components/ui/button";
 import { MatchScoreBadge } from "./MatchScoreBadge";
 import { ImageCard } from "./ImageCard";
 import { ImageMetaPanel } from "./ImageMetaPanel";
+import { useI18n } from "./LanguageProvider";
+import { fmt } from "@/lib/i18n";
 
 /** Page browser: filterable table + right-hand detail panel. */
 export function PageBrowser({ siteId }: { siteId: string }) {
+  const { dict } = useI18n();
   const { selectedPageId, selectPage, pageFilters, setPageFilter } = useAppStore();
   const [pages, setPages] = useState<PageDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,29 +70,29 @@ export function PageBrowser({ siteId }: { siteId: string }) {
       <div className={selected ? "w-1/2 xl:w-3/5" : "w-full"}>
         <div className="mb-3 flex flex-wrap gap-2">
           <Input
-            placeholder="Search title / URL…"
+            placeholder={dict.pagesView.searchPlaceholder}
             className="w-52"
             value={pageFilters.q}
             onChange={(e) => setPageFilter("q", e.target.value)}
           />
           <Select value={pageFilters.niche} onChange={(e) => setPageFilter("niche", e.target.value)}>
-            <option value="">All niches</option>
+            <option value="">{dict.pagesView.allNiches}</option>
             {NICHES.map((n) => (
               <option key={n} value={n}>{n}</option>
             ))}
           </Select>
           <Select value={pageFilters.cpt} onChange={(e) => setPageFilter("cpt", e.target.value)}>
-            <option value="">All CPTs</option>
+            <option value="">{dict.pagesView.allCpts}</option>
             {CPTS.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </Select>
           <Select value={pageFilters.coverage} onChange={(e) => setPageFilter("coverage", e.target.value)}>
-            <option value="">Any coverage</option>
-            <option value="none">No images</option>
-            <option value="ai">Has AI images</option>
-            <option value="stock">Has stock images</option>
-            <option value="full">Covered</option>
+            <option value="">{dict.pagesView.anyCoverage}</option>
+            <option value="none">{dict.pagesView.covNone}</option>
+            <option value="ai">{dict.pagesView.covAi}</option>
+            <option value="stock">{dict.pagesView.covStock}</option>
+            <option value="full">{dict.pagesView.covFull}</option>
           </Select>
         </div>
 
@@ -97,19 +100,19 @@ export function PageBrowser({ siteId }: { siteId: string }) {
           <table className="w-full text-sm">
             <thead className="bg-zinc-900 text-left text-xs uppercase tracking-wider text-zinc-500">
               <tr>
-                <th className="p-2.5">Page</th>
-                <th className="p-2.5">CPT</th>
-                <th className="p-2.5">Niche</th>
-                <th className="p-2.5">City</th>
-                <th className="p-2.5 text-center">AI</th>
-                <th className="p-2.5 text-center">Stock</th>
+                <th className="p-2.5">{dict.pagesView.thPage}</th>
+                <th className="p-2.5">{dict.pagesView.thCpt}</th>
+                <th className="p-2.5">{dict.pagesView.thNiche}</th>
+                <th className="p-2.5">{dict.pagesView.thCity}</th>
+                <th className="p-2.5 text-center">{dict.pagesView.thAi}</th>
+                <th className="p-2.5 text-center">{dict.pagesView.thStock}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6} className="p-6 text-center text-zinc-500">Loading pages…</td></tr>
+                <tr><td colSpan={6} className="p-6 text-center text-zinc-500">{dict.pagesView.loading}</td></tr>
               ) : pages.length === 0 ? (
-                <tr><td colSpan={6} className="p-6 text-center text-zinc-500">No pages yet — run a sitemap ingest.</td></tr>
+                <tr><td colSpan={6} className="p-6 text-center text-zinc-500">{dict.pagesView.empty}</td></tr>
               ) : (
                 pages.map((p) => (
                   <tr
@@ -155,34 +158,34 @@ export function PageBrowser({ siteId }: { siteId: string }) {
 
           <div className="flex gap-2">
             <Button size="sm" disabled={busy} onClick={() => generateFor(selected.id)}>
-              Generate AI images
+              {dict.pagesView.generate}
             </Button>
             <Button size="sm" variant="secondary" disabled={busy} onClick={() => exportPage(selected.id)}>
-              Export to WordPress
+              {dict.pagesView.exportWp}
             </Button>
           </div>
 
           <section>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              AI images ({selected.aiImages.length})
+              {fmt(dict.pagesView.aiSection, { n: selected.aiImages.length })}
             </h3>
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
               {selected.aiImages.map((img) => (
                 <ImageCard key={img.id} image={img} onChanged={load} />
               ))}
-              {!selected.aiImages.length && <p className="text-xs text-zinc-600">No AI images yet.</p>}
+              {!selected.aiImages.length && <p className="text-xs text-zinc-600">{dict.pagesView.noAi}</p>}
             </div>
           </section>
 
           <section>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              Stock assignments ({selected.stockAssignments.length})
+              {fmt(dict.pagesView.stockSection, { n: selected.stockAssignments.length })}
             </h3>
             <div className="space-y-3">
               {selected.stockAssignments.map((a) => (
                 <StockAssignmentRow key={a.id} assignment={a} onChanged={load} />
               ))}
-              {!selected.stockAssignments.length && <p className="text-xs text-zinc-600">No stock images assigned.</p>}
+              {!selected.stockAssignments.length && <p className="text-xs text-zinc-600">{dict.pagesView.noStock}</p>}
             </div>
           </section>
         </aside>
@@ -198,6 +201,7 @@ function StockAssignmentRow({
   assignment: PageDto["stockAssignments"][number];
   onChanged: () => void;
 }) {
+  const { dict } = useI18n();
   const [editing, setEditing] = useState(false);
   async function approve(approved: boolean) {
     await fetch(`/api/assignments/${assignment.id}`, {
@@ -222,19 +226,19 @@ function StockAssignmentRow({
           <MatchScoreBadge score={assignment.matchScore} />
           <Badge>{assignment.position}</Badge>
           <Badge>{assignment.assignedBy}</Badge>
-          {assignment.approved && <Badge variant="green">approved</Badge>}
-          {assignment.exportStatus === "exported" && <Badge variant="blue">in WP</Badge>}
+          {assignment.approved && <Badge variant="green">{dict.status.approved}</Badge>}
+          {assignment.exportStatus === "exported" && <Badge variant="blue">{dict.common.inWp}</Badge>}
         </div>
         <p className="truncate text-xs text-zinc-400" title={assignment.altText}>{assignment.altText}</p>
         <div className="flex gap-1.5">
           <Button size="sm" variant="success" onClick={() => approve(true)} disabled={assignment.approved}>
-            Approve
+            {dict.common.approve}
           </Button>
           <Button size="sm" variant="destructive" onClick={() => approve(false)} disabled={!assignment.approved}>
-            Revoke
+            {dict.common.revoke}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => setEditing((e) => !e)}>
-            {editing ? "Close" : "Edit"}
+            {editing ? dict.common.close : dict.common.edit}
           </Button>
         </div>
         {editing && (

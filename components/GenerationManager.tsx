@@ -7,9 +7,12 @@ import { ImageCard } from "./ImageCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { PageDto } from "@/lib/types";
+import { useI18n } from "./LanguageProvider";
+import { fmt } from "@/lib/i18n";
 
 /** AI generation view: style library | pages needing images | queue monitor. */
 export function GenerationManager({ siteId }: { siteId: string }) {
+  const { dict } = useI18n();
   const [pages, setPages] = useState<PageDto[]>([]);
   const [styleId, setStyleId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -42,16 +45,16 @@ export function GenerationManager({ siteId }: { siteId: string }) {
     if (!ids.length) return;
     setBusy(true);
     setGenerating(true);
-    setNotice(`Launching generation for ${ids.length} page(s)…`);
+    setNotice(fmt(dict.gen.launching, { n: ids.length }));
     const res = await fetch("/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ pageIds: ids, styleId: styleId || undefined }),
     });
     const data = await res.json();
-    if (!res.ok) setNotice(data.error || "Generation failed");
-    else if (data.mode === "queued") setNotice(`${data.count} jobs queued on Redis.`);
-    else setNotice(data.note || `Generated inline: ${data.results?.filter((r: { ok: boolean }) => r.ok).length} ok.`);
+    if (!res.ok) setNotice(data.error || dict.gen.genFailed);
+    else if (data.mode === "queued") setNotice(fmt(dict.gen.queued, { n: data.count }));
+    else setNotice(data.note || fmt(dict.gen.inlineOk, { n: data.results?.filter((r: { ok: boolean }) => r.ok).length ?? 0 }));
     setBusy(false);
     setSelectedIds(new Set());
     load();
@@ -68,14 +71,14 @@ export function GenerationManager({ siteId }: { siteId: string }) {
         <section>
           <div className="mb-2 flex items-center justify-between">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              Pages needing AI images ({needing.length})
+              {fmt(dict.gen.needing, { n: needing.length })}
             </h3>
             <div className="flex gap-2">
               <Button size="sm" variant="secondary" disabled={busy || !selectedIds.size} onClick={() => generate([...selectedIds])}>
-                Generate selected ({selectedIds.size})
+                {fmt(dict.gen.generateSelected, { n: selectedIds.size })}
               </Button>
               <Button size="sm" disabled={busy || !needing.length} onClick={() => generate(needing.map((p) => p.id))}>
-                Generate all
+                {dict.gen.generateAll}
               </Button>
             </div>
           </div>
@@ -94,13 +97,13 @@ export function GenerationManager({ siteId }: { siteId: string }) {
                 {p.city && <Badge>{p.city}</Badge>}
               </label>
             ))}
-            {!needing.length && <p className="p-3 text-xs text-zinc-600">All pages have AI images. 🎉</p>}
+            {!needing.length && <p className="p-3 text-xs text-zinc-600">{dict.gen.allCovered}</p>}
           </div>
         </section>
 
         <section>
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-            Generated variants (latest pages)
+            {dict.gen.variants}
           </h3>
           <div className="space-y-4">
             {withImages.slice(0, 10).map((p) => (
@@ -113,7 +116,7 @@ export function GenerationManager({ siteId }: { siteId: string }) {
                 </div>
               </div>
             ))}
-            {!withImages.length && <p className="text-xs text-zinc-600">Nothing generated yet.</p>}
+            {!withImages.length && <p className="text-xs text-zinc-600">{dict.gen.nothing}</p>}
           </div>
         </section>
       </div>

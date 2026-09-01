@@ -3,6 +3,8 @@
 import { useCallback, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useI18n } from "./LanguageProvider";
+import { fmt } from "@/lib/i18n";
 
 interface Props {
   siteId: string;
@@ -11,6 +13,7 @@ interface Props {
 
 /** Drag-and-drop bulk uploader for stock company photos. */
 export function StockUploader({ siteId, onUploaded }: Props) {
+  const { dict } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
@@ -25,14 +28,14 @@ export function StockUploader({ siteId, onUploaded }: Props) {
         const fd = new FormData();
         fd.set("siteId", siteId);
         for (const f of list.slice(i, i + BATCH)) fd.append("files", f);
-        setProgress(`Uploading ${Math.min(i + BATCH, list.length)}/${list.length}…`);
+        setProgress(fmt(dict.stock.uploading, { a: Math.min(i + BATCH, list.length), b: list.length }));
         const res = await fetch("/api/stock/upload", { method: "POST", body: fd });
         if (res.ok) done += (await res.json()).uploaded;
       }
-      setProgress(`Uploaded ${done}/${list.length} photos.`);
+      setProgress(fmt(dict.stock.uploaded, { a: done, b: list.length }));
       onUploaded?.();
     },
-    [siteId, onUploaded]
+    [siteId, onUploaded, dict]
   );
 
   return (
@@ -52,10 +55,10 @@ export function StockUploader({ siteId, onUploaded }: Props) {
         upload(e.dataTransfer.files);
       }}
     >
-      <p className="text-sm text-zinc-300">Drop company photos here (100+ at once is fine)</p>
-      <p className="text-xs text-zinc-500">JPEG / PNG / WebP — converted to WebP on upload</p>
+      <p className="text-sm text-zinc-300">{dict.stock.dropHere}</p>
+      <p className="text-xs text-zinc-500">{dict.stock.formats}</p>
       <Button variant="secondary" size="sm" type="button" onClick={() => inputRef.current?.click()}>
-        Browse files
+        {dict.stock.browse}
       </Button>
       <input
         ref={inputRef}

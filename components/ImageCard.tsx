@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { AiImageDto } from "@/lib/types";
 import { ImageMetaPanel } from "./ImageMetaPanel";
+import { useI18n } from "./LanguageProvider";
 
 interface Props {
   image: AiImageDto;
@@ -14,6 +15,7 @@ interface Props {
 
 /** AI image variant card with approve / reject / metadata editing. */
 export function ImageCard({ image, onChanged }: Props) {
+  const { dict } = useI18n();
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
 
@@ -35,7 +37,7 @@ export function ImageCard({ image, onChanged }: Props) {
         <img src={image.imageUrl} alt={image.altText} className="aspect-video w-full object-cover" />
       ) : (
         <div className="flex aspect-video w-full items-center justify-center bg-zinc-950 text-xs text-zinc-600">
-          {image.status === "pending" ? "generating…" : "no image"}
+          {image.status === "pending" ? dict.imageCard.generating : dict.imageCard.noImage}
         </div>
       )}
       <div className="space-y-2 p-3">
@@ -45,9 +47,9 @@ export function ImageCard({ image, onChanged }: Props) {
           <Badge
             variant={image.status === "approved" ? "green" : image.status === "rejected" ? "red" : "default"}
           >
-            {image.status}
+            {dict.status[image.status] ?? image.status}
           </Badge>
-          {image.exportStatus === "exported" && <Badge variant="blue">in WP</Badge>}
+          {image.exportStatus === "exported" && <Badge variant="blue">{dict.common.inWp}</Badge>}
         </div>
         <p className="truncate font-mono text-[11px] text-zinc-500" title={image.filename}>
           {image.filename}
@@ -57,13 +59,13 @@ export function ImageCard({ image, onChanged }: Props) {
         </p>
         <div className="flex gap-1.5">
           <Button size="sm" variant="success" disabled={busy || image.status === "approved"} onClick={() => setStatus("approved")}>
-            Approve
+            {dict.common.approve}
           </Button>
           <Button size="sm" variant="destructive" disabled={busy || image.status === "rejected"} onClick={() => setStatus("rejected")}>
-            Reject
+            {dict.common.reject}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => setEditing((e) => !e)}>
-            {editing ? "Close" : "Edit"}
+            {editing ? dict.common.close : dict.common.edit}
           </Button>
         </div>
         {editing && (

@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useI18n } from "./LanguageProvider";
 
 /** New-site form: domain + sitemap + brand config, then triggers sitemap ingestion. */
 export function SitemapIngester() {
+  const { dict } = useI18n();
   const router = useRouter();
   const [form, setForm] = useState({
     name: "",
@@ -49,7 +51,7 @@ export function SitemapIngester() {
       const { site } = await res.json();
 
       setState("ingesting");
-      setMessage("Site saved. Reading sitemap and analyzing pages — this can take a few minutes…");
+      setMessage(dict.newSite.ingestingMsg);
       const ingestRes = await fetch(`/api/sites/${site.id}/ingest`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -70,19 +72,19 @@ export function SitemapIngester() {
     <form onSubmit={submit} className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Site</CardTitle>
+          <CardTitle>{dict.newSite.cardSite}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2">
           <div>
-            <Label>Name</Label>
+            <Label>{dict.newSite.name}</Label>
             <Input required value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="Demenagement Paris 15" />
           </div>
           <div>
-            <Label>Domain</Label>
+            <Label>{dict.newSite.domain}</Label>
             <Input required value={form.domain} onChange={(e) => set("domain", e.target.value)} placeholder="example.fr" />
           </div>
           <div className="sm:col-span-2">
-            <Label>Sitemap URL</Label>
+            <Label>{dict.newSite.sitemapUrl}</Label>
             <Input
               required
               type="url"
@@ -96,23 +98,23 @@ export function SitemapIngester() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Brand config (injected into AI prompts)</CardTitle>
+          <CardTitle>{dict.newSite.cardBrand}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-4">
           <div>
-            <Label>Primary</Label>
+            <Label>{dict.newSite.primary}</Label>
             <Input type="color" value={form.primary} onChange={(e) => set("primary", e.target.value)} className="h-9 p-1" />
           </div>
           <div>
-            <Label>Secondary</Label>
+            <Label>{dict.newSite.secondary}</Label>
             <Input type="color" value={form.secondary} onChange={(e) => set("secondary", e.target.value)} className="h-9 p-1" />
           </div>
           <div>
-            <Label>Accent</Label>
+            <Label>{dict.newSite.accent}</Label>
             <Input type="color" value={form.accent} onChange={(e) => set("accent", e.target.value)} className="h-9 p-1" />
           </div>
           <div>
-            <Label>Font style</Label>
+            <Label>{dict.newSite.fontStyle}</Label>
             <select
               value={form.fontStyle}
               onChange={(e) => set("fontStyle", e.target.value)}
@@ -128,15 +130,15 @@ export function SitemapIngester() {
 
       <Card>
         <CardHeader>
-          <CardTitle>WordPress export (optional)</CardTitle>
+          <CardTitle>{dict.newSite.cardWp}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2">
           <div>
-            <Label>WP REST base URL</Label>
+            <Label>{dict.newSite.wpApiUrl}</Label>
             <Input value={form.wpApiUrl} onChange={(e) => set("wpApiUrl", e.target.value)} placeholder="https://example.fr/wp-json" />
           </div>
           <div>
-            <Label>Auth token (JWT or user:app-password)</Label>
+            <Label>{dict.newSite.wpToken}</Label>
             <Input value={form.wpAuthToken} onChange={(e) => set("wpAuthToken", e.target.value)} placeholder="eyJ… or admin:xxxx xxxx" />
           </div>
         </CardContent>
@@ -144,7 +146,7 @@ export function SitemapIngester() {
 
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={busy}>
-          {state === "saving" ? "Saving…" : state === "ingesting" ? "Ingesting sitemap…" : "Add site & ingest sitemap"}
+          {state === "saving" ? dict.newSite.saving : state === "ingesting" ? dict.newSite.ingesting : dict.newSite.submit}
         </Button>
         {message && (
           <p className={state === "error" ? "text-sm text-red-400" : "text-sm text-zinc-400"}>{message}</p>

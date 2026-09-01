@@ -9,6 +9,8 @@ import { Select } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAppStore } from "@/lib/store";
 import type { StockImageDto } from "@/lib/types";
+import { useI18n } from "./LanguageProvider";
+import { fmt } from "@/lib/i18n";
 
 interface PageMatch {
   page: { id: string; title: string; url: string; niche: string; city?: string | null };
@@ -17,6 +19,7 @@ interface PageMatch {
 
 /** Stock photo manager: upload → analyze → match → assign. */
 export function StockManager({ siteId }: { siteId: string }) {
+  const { dict } = useI18n();
   const { selectedStockImageId, selectStockImage } = useAppStore();
   const [images, setImages] = useState<StockImageDto[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
@@ -49,28 +52,28 @@ export function StockManager({ siteId }: { siteId: string }) {
 
   async function analyzeAll() {
     setBusy("analyze");
-    setNotice("Analyzing photos with GPT-4o Vision…");
+    setNotice(dict.stock.analyzingMsg);
     const res = await fetch("/api/stock/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ siteId }),
     });
     const data = await res.json();
-    setNotice(res.ok ? `Analyzed ${data.analyzed}/${data.total} (${data.failed} failed).` : data.error);
+    setNotice(res.ok ? fmt(dict.stock.analyzedMsg, { a: data.analyzed, b: data.total, f: data.failed }) : data.error);
     setBusy(null);
     load();
   }
 
   async function autoAssign() {
     setBusy("assign");
-    setNotice("Matching images to pages (cosine similarity)…");
+    setNotice(dict.stock.matchingMsg);
     const res = await fetch("/api/stock/assign", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ siteId, mode: "auto" }),
     });
     const data = await res.json();
-    setNotice(res.ok ? `Assigned ${data.assigned} images (${data.strongMatches} strong matches).` : data.error);
+    setNotice(res.ok ? fmt(dict.stock.assignedMsg, { n: data.assigned, s: data.strongMatches }) : data.error);
     setBusy(null);
     load();
   }
@@ -84,7 +87,7 @@ export function StockManager({ siteId }: { siteId: string }) {
       body: JSON.stringify({ siteId, mode: "manual", pageId, stockImageId: selected.id }),
     });
     setBusy(null);
-    setNotice("Assigned.");
+    setNotice(dict.stock.assignedOne);
     load();
   }
 
@@ -94,10 +97,10 @@ export function StockManager({ siteId }: { siteId: string }) {
         <StockUploader siteId={siteId} onUploaded={load} />
         <div className="space-y-2">
           <Button className="w-full" variant="secondary" disabled={busy !== null} onClick={analyzeAll}>
-            {busy === "analyze" ? "Analyzing…" : "Analyze unprocessed"}
+            {busy === "analyze" ? dict.stock.analyzing : dict.stock.analyze}
           </Button>
           <Button className="w-full" disabled={busy !== null} onClick={autoAssign}>
-            {busy === "assign" ? "Assigning…" : "Auto-assign to pages"}
+            {busy === "assign" ? dict.stock.assigning : dict.stock.autoAssign}
           </Button>
           {notice && <p className="text-xs text-amber-400">{notice}</p>}
         </div>
@@ -105,12 +108,12 @@ export function StockManager({ siteId }: { siteId: string }) {
 
       <div>
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-sm text-zinc-400">{images.length} photos</p>
+          <p className="text-sm text-zinc-400">{fmt(dict.stock.photosCount, { n: images.length })}</p>
           <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="">All statuses</option>
-            <option value="unprocessed">Unprocessed</option>
-            <option value="analyzed">Analyzed</option>
-            <option value="assigned">Assigned</option>
+            <option value="">{dict.stock.allStatuses}</option>
+            <option value="unprocessed">{dict.status.unprocessed}</option>
+            <option value="analyzed">{dict.status.analyzed}</option>
+            <option value="assigned">{dict.status.assigned}</option>
           </Select>
         </div>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-4">
@@ -127,7 +130,7 @@ export function StockManager({ siteId }: { siteId: string }) {
                   <Badge
                     variant={img.status === "assigned" ? "green" : img.status === "analyzed" ? "blue" : "default"}
                   >
-                    {img.status}
+                    {dict.status[img.status] ?? img.status}
                   </Badge>
                   {img.niche && <Badge>{img.niche}</Badge>}
                   {typeof img.quality === "number" && <Badge variant="amber">Q{img.quality}</Badge>}
@@ -137,7 +140,7 @@ export function StockManager({ siteId }: { siteId: string }) {
             </button>
           ))}
           {!images.length && (
-            <p className="col-span-full py-10 text-center text-sm text-zinc-600">No stock photos yet — upload some.</p>
+            <p className="col-span-full py-10 text-center text-sm text-zinc-600">{dict.stock.empty}</p>
           )}
         </div>
       </div>
@@ -145,7 +148,7 @@ export function StockManager({ siteId }: { siteId: string }) {
       <div>
         <Card>
           <CardHeader>
-            <CardTitle>{selected ? "Matched pages" : "Select a photo"}</CardTitle>
+            <CardTitle>{selected ? dict.stock.matchedPages : dict.stock.selectPhoto}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {selected && (
@@ -165,18 +168,18 @@ export function StockManager({ siteId }: { siteId: string }) {
                       <div className="mt-1 flex items-center justify-between gap-2">
                         <MatchScoreBadge score={m.score} />
                         <Button size="sm" variant="secondary" disabled={busy !== null} onClick={() => assignManual(m.page.id)}>
-                          Assign
+                          {dict.common.assign}
                         </Button>
                       </div>
                     </div>
                   ))}
                   {selected.status === "unprocessed" && (
-                    <p className="text-xs text-zinc-600">Analyze this photo first to compute matches.</p>
+                    <p className="text-xs text-zinc-600">{dict.stock.analyzeFirst}</p>
                   )}
                 </div>
               </>
             )}
-            {!selected && <p className="text-xs text-zinc-600">Click a photo to see its top matching pages.</p>}
+            {!selected && <p className="text-xs text-zinc-600">{dict.stock.clickHint}</p>}
           </CardContent>
         </Card>
       </div>

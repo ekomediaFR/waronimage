@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { prisma, safeQuery } from "@/lib/prisma";
+import { getDict } from "@/lib/i18n-server";
+import { fmt } from "@/lib/i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
+  const dict = getDict();
   const sites = await safeQuery(
     () =>
       prisma.site.findMany({
@@ -18,28 +21,23 @@ export default async function HomePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Client sites</h1>
-        <p className="mt-1 text-sm text-zinc-400">
-          Pick a site to manage its AI images, stock photos and WordPress exports.
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">{dict.home.title}</h1>
+        <p className="mt-1 text-sm text-zinc-400">{dict.home.subtitle}</p>
       </div>
 
       {sites === null ? (
         <Card className="border-amber-800 bg-amber-950/20">
           <CardContent className="p-6 text-sm text-amber-300">
-            <p className="font-semibold">Database not connected.</p>
-            <p className="mt-1 text-amber-400/80">
-              Set <code>DATABASE_URL</code> in your environment (Supabase Postgres) and run{" "}
-              <code>npx prisma db push</code> to bring War on Image online.
-            </p>
+            <p className="font-semibold">{dict.home.dbDown}</p>
+            <p className="mt-1 text-amber-400/80">{dict.home.dbHint}</p>
           </CardContent>
         </Card>
       ) : sites.length === 0 ? (
         <Card>
           <CardContent className="p-10 text-center">
-            <p className="text-zinc-400">No sites yet.</p>
+            <p className="text-zinc-400">{dict.home.noSites}</p>
             <Link href="/sites/new" className="mt-2 inline-block text-amber-400 hover:underline">
-              Add your first site →
+              {dict.home.addFirst}
             </Link>
           </CardContent>
         </Card>
@@ -53,9 +51,9 @@ export default async function HomePage() {
                   <p className="text-xs text-zinc-500">{site.domain}</p>
                 </CardHeader>
                 <CardContent className="flex gap-2">
-                  <Badge>{site._count.pages} pages</Badge>
-                  <Badge>{site._count.stockImages} stock photos</Badge>
-                  {site.wpApiUrl && <Badge variant="blue">WP connected</Badge>}
+                  <Badge>{fmt(dict.home.pagesCount, { n: site._count.pages })}</Badge>
+                  <Badge>{fmt(dict.home.stockCount, { n: site._count.stockImages })}</Badge>
+                  {site.wpApiUrl && <Badge variant="blue">{dict.common.wpConnected}</Badge>}
                 </CardContent>
               </Card>
             </Link>

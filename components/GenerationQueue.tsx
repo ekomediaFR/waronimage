@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useI18n } from "./LanguageProvider";
 
 interface Status {
   pending: number;
@@ -13,6 +14,7 @@ interface Status {
 
 /** Live generation status monitor — polls /api/generate/status every 3s. */
 export function GenerationQueue({ siteId, active }: { siteId: string; active: boolean }) {
+  const { dict } = useI18n();
   const [status, setStatus] = useState<Status | null>(null);
 
   useEffect(() => {
@@ -35,21 +37,21 @@ export function GenerationQueue({ siteId, active }: { siteId: string; active: bo
 
   const rows: { label: string; value: number | string; tone: string }[] = status
     ? [
-        { label: "Queued / processing", value: status.queue ? `${status.queue.waiting ?? 0} / ${status.queue.active ?? 0}` : status.pending, tone: "text-amber-400" },
-        { label: "Generated (awaiting review)", value: status.generated, tone: "text-sky-400" },
-        { label: "Approved", value: status.approved, tone: "text-emerald-400" },
-        { label: "Failed / rejected", value: status.rejected, tone: "text-red-400" },
+        { label: dict.queue.queuedProcessing, value: status.queue ? `${status.queue.waiting ?? 0} / ${status.queue.active ?? 0}` : status.pending, tone: "text-amber-400" },
+        { label: dict.queue.generated, value: status.generated, tone: "text-sky-400" },
+        { label: dict.queue.approved, value: status.approved, tone: "text-emerald-400" },
+        { label: dict.queue.failed, value: status.rejected, tone: "text-red-400" },
       ]
     : [];
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Queue monitor</CardTitle>
+        <CardTitle>{dict.queue.title}</CardTitle>
       </CardHeader>
       <CardContent>
         {!status ? (
-          <p className="text-sm text-zinc-500">Loading…</p>
+          <p className="text-sm text-zinc-500">{dict.common.loading}</p>
         ) : (
           <ul className="space-y-2">
             {rows.map((r) => (
@@ -61,9 +63,7 @@ export function GenerationQueue({ siteId, active }: { siteId: string; active: bo
           </ul>
         )}
         {status && !status.queue && (
-          <p className="mt-3 text-[11px] text-zinc-600">
-            Redis queue offline — generation runs inline. Set REDIS_URL + run <code>npm run worker</code> for batches.
-          </p>
+          <p className="mt-3 text-[11px] text-zinc-600">{dict.queue.redisNote}</p>
         )}
       </CardContent>
     </Card>

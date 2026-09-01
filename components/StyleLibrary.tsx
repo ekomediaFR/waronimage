@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import type { ImageStyleDto } from "@/lib/types";
+import { useI18n } from "./LanguageProvider";
 
 interface Props {
   selectedStyleId?: string | null;
@@ -14,6 +15,7 @@ interface Props {
 
 /** Image style library: list, select for generation, create new styles. */
 export function StyleLibrary({ selectedStyleId, onSelect }: Props) {
+  const { dict } = useI18n();
   const [styles, setStyles] = useState<ImageStyleDto[]>([]);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ name: "", description: "", promptTemplate: "", niches: "" });
@@ -46,9 +48,9 @@ export function StyleLibrary({ selectedStyleId, onSelect }: Props) {
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0">
-        <CardTitle>Style library</CardTitle>
+        <CardTitle>{dict.gen.styleLibrary}</CardTitle>
         <Button size="sm" variant="secondary" onClick={() => setCreating((c) => !c)}>
-          {creating ? "Cancel" : "+ New style"}
+          {creating ? dict.common.cancel : dict.gen.newStyle}
         </Button>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -57,8 +59,8 @@ export function StyleLibrary({ selectedStyleId, onSelect }: Props) {
             onClick={() => onSelect(null)}
             className={`w-full rounded-md border p-2 text-left text-sm ${!selectedStyleId ? "border-amber-500 bg-amber-500/10" : "border-zinc-800 hover:border-zinc-600"}`}
           >
-            <span className="font-medium text-zinc-200">Auto-match styles</span>
-            <p className="text-xs text-zinc-500">Best 2 styles per page (niche + intent)</p>
+            <span className="font-medium text-zinc-200">{dict.gen.autoMatch}</span>
+            <p className="text-xs text-zinc-500">{dict.gen.autoMatchHint}</p>
           </button>
         )}
         {styles.map((style) => (
@@ -82,15 +84,15 @@ export function StyleLibrary({ selectedStyleId, onSelect }: Props) {
         {creating && (
           <form onSubmit={create} className="space-y-2 rounded-md border border-zinc-800 bg-zinc-950 p-3">
             <div>
-              <Label>Name</Label>
+              <Label>{dict.gen.formName}</Label>
               <Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </div>
             <div>
-              <Label>Description</Label>
+              <Label>{dict.gen.formDesc}</Label>
               <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </div>
             <div>
-              <Label>Prompt template ({"{niche} {city} {service} {primary_color}"})</Label>
+              <Label>{dict.gen.formTemplate}</Label>
               <Textarea
                 required
                 value={form.promptTemplate}
@@ -98,11 +100,11 @@ export function StyleLibrary({ selectedStyleId, onSelect }: Props) {
               />
             </div>
             <div>
-              <Label>Niches (comma-separated)</Label>
+              <Label>{dict.gen.formNiches}</Label>
               <Input value={form.niches} onChange={(e) => setForm({ ...form, niches: e.target.value })} placeholder="moving, storage" />
             </div>
             <Button size="sm" type="submit">
-              Create style
+              {dict.gen.create}
             </Button>
           </form>
         )}

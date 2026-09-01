@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
+import { useI18n } from "./LanguageProvider";
 
 interface Props {
   endpoint: string; // PATCH target
@@ -12,6 +13,7 @@ interface Props {
 
 /** Inline ALT / title / filename / caption editor used for both AI and stock images. */
 export function ImageMetaPanel({ endpoint, initial, onSaved }: Props) {
+  const { dict } = useI18n();
   const [form, setForm] = useState(initial);
   const [busy, setBusy] = useState(false);
 
@@ -29,7 +31,7 @@ export function ImageMetaPanel({ endpoint, initial, onSaved }: Props) {
   return (
     <div className="space-y-2 rounded-md border border-zinc-800 bg-zinc-950 p-3">
       <div>
-        <Label>ALT text ({form.altText.length}/125)</Label>
+        <Label>{dict.meta.alt} ({form.altText.length}/125)</Label>
         <Textarea
           value={form.altText}
           maxLength={125}
@@ -38,22 +40,22 @@ export function ImageMetaPanel({ endpoint, initial, onSaved }: Props) {
       </div>
       {form.title !== undefined && (
         <div>
-          <Label>Title ({(form.title || "").length}/60)</Label>
+          <Label>{dict.meta.title} ({(form.title || "").length}/60)</Label>
           <Input value={form.title} maxLength={60} onChange={(e) => setForm({ ...form, title: e.target.value })} />
         </div>
       )}
       <div>
-        <Label>Filename</Label>
+        <Label>{dict.meta.filename}</Label>
         <Input value={form.filename} onChange={(e) => setForm({ ...form, filename: e.target.value })} />
       </div>
       {form.caption !== undefined && (
         <div>
-          <Label>Caption ({(form.caption || "").length}/160)</Label>
+          <Label>{dict.meta.caption} ({(form.caption || "").length}/160)</Label>
           <Input value={form.caption} maxLength={160} onChange={(e) => setForm({ ...form, caption: e.target.value })} />
         </div>
       )}
       <Button size="sm" disabled={busy} onClick={save}>
-        {busy ? "Saving…" : "Save metadata"}
+        {busy ? dict.common.saving : dict.meta.save}
       </Button>
     </div>
   );
