@@ -98,7 +98,7 @@ export function PageBrowser({ siteId }: { siteId: string }) {
 
         <div className="overflow-x-auto rounded-lg border border-zinc-800">
           <table className="w-full text-sm">
-            <thead className="bg-zinc-900 text-left text-xs uppercase tracking-wider text-zinc-500">
+            <thead className="bg-zinc-950 text-left text-xs font-medium text-zinc-500">
               <tr>
                 <th className="p-2.5">{dict.pagesView.thPage}</th>
                 <th className="p-2.5">{dict.pagesView.thCpt}</th>
@@ -118,7 +118,7 @@ export function PageBrowser({ siteId }: { siteId: string }) {
                   <tr
                     key={p.id}
                     onClick={() => selectPage(p.id === selectedPageId ? null : p.id)}
-                    className={`cursor-pointer border-t border-zinc-800/70 hover:bg-zinc-900 ${p.id === selectedPageId ? "bg-amber-500/5" : ""}`}
+                    className={`cursor-pointer border-t border-zinc-800/70 hover:bg-zinc-950 ${p.id === selectedPageId ? "bg-amber-500/5" : ""}`}
                   >
                     <td className="max-w-64 p-2.5">
                       <p className="truncate font-medium text-zinc-200">{p.title}</p>

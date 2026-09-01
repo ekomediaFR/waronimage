@@ -13,6 +13,7 @@ export function SiteTabs({ siteId }: { siteId: string }) {
     { slug: "pages", label: dict.tabs.pages },
     { slug: "ai-images", label: dict.tabs.ai },
     { slug: "stock", label: dict.tabs.stock },
+    { slug: "wp-library", label: dict.tabs.wpLibrary },
     { slug: "export", label: dict.tabs.export },
   ];
 

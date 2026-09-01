@@ -9,10 +9,10 @@ export function AppHeader() {
   const { locale, dict, setLocale } = useI18n();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/90 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-zinc-800 bg-white/95 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-screen-2xl items-center gap-6 px-4">
         <Link href="/" className="flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded bg-amber-500 font-black text-zinc-950">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500 font-black text-white">
             W
           </span>
           <span className="text-sm font-bold uppercase tracking-widest text-zinc-100">

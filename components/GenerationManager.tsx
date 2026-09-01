@@ -85,7 +85,7 @@ export function GenerationManager({ siteId }: { siteId: string }) {
           {notice && <p className="mb-2 text-xs text-amber-400">{notice}</p>}
           <div className="max-h-80 space-y-1.5 overflow-y-auto rounded-lg border border-zinc-800 p-2">
             {needing.map((p) => (
-              <label key={p.id} className="flex cursor-pointer items-center gap-2 rounded-md p-1.5 hover:bg-zinc-900">
+              <label key={p.id} className="flex cursor-pointer items-center gap-2 rounded-md p-1.5 hover:bg-zinc-950">
                 <input
                   type="checkbox"
                   checked={selectedIds.has(p.id)}

@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Roboto } from "next/font/google";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import { AppHeader } from "@/components/AppHeader";
 import { getLocale } from "@/lib/i18n-server";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const roboto = Roboto({ subsets: ["latin"], weight: ["400", "500", "700"] });
 
 export const metadata: Metadata = {
   title: "War on Image Manager",
@@ -16,8 +16,8 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const locale = getLocale();
   return (
-    <html lang={locale} className="dark">
-      <body className={inter.className}>
+    <html lang={locale}>
+      <body className={roboto.className}>
         <LanguageProvider initialLocale={locale}>
           <AppHeader />
           <main className="mx-auto max-w-screen-2xl px-4 py-6">{children}</main>
