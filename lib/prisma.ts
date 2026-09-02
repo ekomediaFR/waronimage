@@ -1,5 +1,11 @@
 import { PrismaClient } from "@prisma/client";
 
+// The schema declares directUrl = env("DIRECT_URL") for Supabase pooling; when a
+// deployment only sets DATABASE_URL, fall back to it so the client still boots.
+if (!process.env.DIRECT_URL && process.env.DATABASE_URL) {
+  process.env.DIRECT_URL = process.env.DATABASE_URL;
+}
+
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 export const prisma =

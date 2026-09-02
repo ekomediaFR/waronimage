@@ -154,6 +154,105 @@ Generate SEO metadata in JSON:
   }
 }
 
+// ─── Static-phase SEO metadata for WP assignments ─────────
+// Pure rules, no AI call — generateSeoMeta() above is the drop-in AI
+// replacement once the OpenAI phase is enabled for assignments too.
+
+/** French display labels for the internal niche keys. */
+const NICHE_LABELS_FR: Record<string, string> = {
+  moving: "déménagement",
+  locksmith: "serrurerie",
+  plumbing: "plomberie",
+  storage: "garde-meuble",
+  electrical: "électricité",
+  cleaning: "nettoyage",
+};
+
+const KNOWN_CITIES = [
+  "paris", "lyon", "marseille", "bordeaux", "nantes", "toulouse",
+  "nice", "rennes", "strasbourg", "montpellier", "lille", "grenoble",
+  "toulon", "angers", "dijon", "reims", "villeurbanne", "clermont-ferrand",
+];
+
+/** Niche key from a token string, using the same hints as page analysis. */
+export function detectNiche(tokens: string): string | null {
+  const lower = tokens.toLowerCase();
+  for (const [key, hints] of Object.entries(NICHE_HINTS)) {
+    if (hints.some((h) => lower.includes(h))) return key;
+  }
+  return null;
+}
+
+/** City name from a token string. */
+export function detectCity(tokens: string): string | null {
+  const lower = tokens.toLowerCase();
+  return KNOWN_CITIES.find((c) => lower.includes(c)) || null;
+}
+
+export interface AssignmentSeoMeta {
+  seoAltText: string;
+  seoTitle: string;
+  seoCaption: string;
+  seoDescription: string;
+  seoFilename: string;
+}
+
+interface AssignmentSeoPage {
+  title: string;
+  slug: string;
+  excerpt?: string | null;
+  metaDesc?: string | null;
+  wpType: string;
+  niche?: string | null;
+  city?: string | null;
+  matchTokens?: string | null;
+}
+
+/** Rule-based SEO metadata for a media ↔ page assignment (French output). */
+export function generateAssignmentSeoMeta(
+  page: AssignmentSeoPage,
+  _media: { filename?: string | null }
+): AssignmentSeoMeta {
+  const nicheKey = page.niche || detectNiche(page.matchTokens || "");
+  const nicheFr = nicheKey ? NICHE_LABELS_FR[nicheKey] || nicheKey : null;
+  const cityRaw = page.city || detectCity(page.matchTokens || "");
+  const city = cityRaw ? cityRaw.split(/[\s-]/).map(cap).join("-") : null;
+  const cpt = page.wpType;
+
+  const seoAltText = truncate(
+    nicheFr || city
+      ? `${cap(nicheFr || "Service")}${city ? ` à ${city}` : ""} — ${page.title}`.trim()
+      : page.title,
+    125
+  );
+
+  const seoTitle = truncate(
+    city ? `${nicheFr ? `${cap(nicheFr)} ` : ""}${city} — ${page.title}` : page.title,
+    60
+  );
+
+  const seoCaption = truncate(
+    `${page.title}${city ? ` à ${city}` : ""}${nicheFr ? ` — ${nicheFr}` : ""}`,
+    160
+  );
+
+  const seoDescription = truncate(
+    page.metaDesc ||
+      page.excerpt ||
+      `${page.title}. ${nicheFr ? `Service de ${nicheFr}` : "Service"} ${city ? `à ${city}` : "en France"}.`,
+    300
+  );
+
+  const filenameParts = [nicheFr, cityRaw, cpt !== "page" && cpt !== "post" ? cpt : null,
+    page.slug.split("-").slice(0, 4).join("-")]
+    .filter(Boolean)
+    .map((p) => kebab(String(p)))
+    .filter(Boolean);
+  const seoFilename = `${(filenameParts.join("-") || "image").slice(0, 55).replace(/-+$/, "")}.webp`;
+
+  return { seoAltText, seoTitle, seoCaption, seoDescription, seoFilename };
+}
+
 function sanitizeFilename(name?: string): string | null {
   if (!name) return null;
   const noExt = name.replace(/\.[a-z0-9]+$/i, "");

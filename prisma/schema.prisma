@@ -3,23 +3,161 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Site {
-  id          String       @id @default(cuid())
-  name        String
-  domain      String       @unique
-  sitemapUrl  String
-  brandColors Json         // { primary, secondary, accent }
-  fontStyle   String       @default("sans") // "serif" | "sans" | "mono"
-  logoUrl     String?
-  wpApiUrl    String?      // e.g. https://example.com/wp-json
-  wpAuthToken String?      // JWT or application password (Basic) token
+  id            String       @id @default(cuid())
+  name          String
+  domain        String       @unique
+  sitemapUrl    String? // optional — WP-first sites work without a sitemap
+  brandColors   Json? // { primary, secondary, accent }
+  fontStyle     String       @default("sans") // "serif" | "sans" | "mono"
+  logoUrl       String?
+  wpApiUrl      String? // domain, .../wp-json or .../wp-json/wp/v2 — normalized in lib/wpRest
+  wpAuthMethod  String       @default("jwt") // "jwt" | "app-password" | "legacy"
+  wpJwtToken    String?
+  wpAppUser     String? // Application Password username
+  wpAppPassword String? // Application Password ("xxxx xxxx xxxx xxxx")
+  wpAuthToken   String? // legacy: JUPITER key (ekoseo_bot app password) or "user:pass"
+  language      String       @default("fr")
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @default(now()) @updatedAt
+  pages         Page[]
+  stockImages   StockImage[]
+  wpPages       WpPage[]
+  wpMedia       WpMedia[]
+  assignments   Assignment[]
+  syncLogs      SyncLog[]
+}
+
+// ─── WORDPRESS PAGES (synced from the WP REST API) ────────
+model WpPage {
+  id     String @id @default(cuid())
+  siteId String
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  // WordPress data
+  wpId                   Int // WordPress page/post ID
+  wpType                 String // "page" | "post" | any CPT slug
+  restBase               String? // actual REST base for the CPT ("pages", "posts", "services"…)
+  url                    String
+  slug                   String
+  title                  String
+  excerpt                String?
+  metaDesc               String?
+  status                 String // "publish" | "draft" | "private"
+  currentFeaturedMediaId Int? // current WP featured_media ID
+
+  // Enrichment (filled during sync, heuristic for now — AI later)
+  niche      String? // "moving" | "locksmith" | …
+  city       String?
+  pageIntent String? // "hub" | "local-service" | "corridor" | "faq" | …
+
+  // Matching
+  matchTokens String? // concatenated searchable string for scoring
+
+  assignments Assignment[]
   createdAt   DateTime     @default(now())
-  pages       Page[]
-  stockImages StockImage[]
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([siteId, wpId, wpType])
+  @@index([siteId])
+}
+
+// ─── WORDPRESS MEDIA (synced from the WP Media Library) ───
+model WpMedia {
+  id     String @id @default(cuid())
+  siteId String
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  // WordPress data
+  wpId       Int // WordPress media ID
+  sourceUrl  String // full URL to the original file
+  thumbUrl   String? // medium/thumbnail size URL for fast grids
+  filename   String
+  mimeType   String
+  width      Int?
+  height     Int?
+  fileSizeKb Int?
+
+  // WordPress metadata (as-is from WP)
+  wpTitle       String?
+  wpAltText     String?
+  wpCaption     String?
+  wpDescription String?
+
+  // Matching
+  matchTokens String?
+
+  // Status
+  isUsable Boolean @default(true) // false when too small for a 16:9 featured image
+
+  assignments Assignment[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([siteId, wpId])
+  @@index([siteId])
+}
+
+// ─── ASSIGNMENTS (media ↔ page matches) ───────────────────
+model Assignment {
+  id      String  @id @default(cuid())
+  siteId  String
+  site    Site    @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  pageId  String
+  page    WpPage  @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  mediaId String
+  media   WpMedia @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  // Matching
+  matchScore  Float // 0.0 – 1.0
+  matchReason String? // "jaccard:0.32 slug:+0.15 …"
+  assignedBy  String  @default("auto") // "auto" | "manual"
+
+  // SEO metadata to write to WP
+  seoAltText     String? // max 125 chars
+  seoTitle       String? // max 60 chars
+  seoCaption     String? // max 160 chars
+  seoDescription String? // max 300 chars
+  seoFilename    String? // kebab-case .webp suggestion
+
+  // Type of assignment — featured uses galleryPosition 0 (a NULL would break the unique key)
+  assignmentType  String @default("featured") // "featured" | "gallery"
+  galleryPosition Int    @default(0)
+
+  // Status
+  approved    Boolean   @default(false)
+  exported    Boolean   @default(false)
+  exportedAt  DateTime?
+  exportError String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([pageId, assignmentType, galleryPosition])
+  @@index([siteId, approved, exported])
+}
+
+// ─── SYNC LOG ─────────────────────────────────────────────
+model SyncLog {
+  id          String    @id @default(cuid())
+  siteId      String
+  site        Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  type        String // "pages-sync" | "media-sync" | "match-run" | "bulk-export"
+  status      String // "running" | "done" | "error"
+  pagesCount  Int?
+  mediaCount  Int?
+  matchCount  Int?
+  exportCount Int?
+  errorMsg    String?
+  startedAt   DateTime  @default(now())
+  finishedAt  DateTime?
+
+  @@index([siteId, type])
 }
 
 model Page {

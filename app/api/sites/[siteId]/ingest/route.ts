@@ -18,6 +18,9 @@ const ANALYSIS_CONCURRENCY = 5;
 export async function POST(req: NextRequest, { params }: { params: { siteId: string } }) {
   const site = await prisma.site.findUnique({ where: { id: params.siteId } });
   if (!site) return NextResponse.json({ error: "Site not found" }, { status: 404 });
+  if (!site.sitemapUrl) {
+    return NextResponse.json({ error: "This site has no sitemap URL — add one in the site settings." }, { status: 400 });
+  }
 
   const body = await req.json().catch(() => ({}));
   const maxPages: number = Math.min(Number(body.maxPages) || 500, 2000);
