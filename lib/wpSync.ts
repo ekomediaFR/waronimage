@@ -5,7 +5,7 @@
 import type { Site } from "@prisma/client";
 import { prisma } from "./prisma";
 import { buildAuthHeaders, discoverPostTypes, wpFetch, wpV2Base } from "./wpRest";
-import { heuristicPageAnalysis } from "./seoMeta";
+import { detectCity, heuristicPageAnalysis } from "./seoMeta";
 
 const PER_PAGE = 100;
 const MAX_PAGES_PER_TYPE = 50; // safety: 5 000 items per post type
@@ -128,6 +128,7 @@ export async function syncPages(site: Site): Promise<number> {
         const url = item.link || "";
         const matchTokens = buildPageMatchTokens(title, excerpt, slug, wpType);
         const analysis = heuristicPageAnalysis(url || slug, title);
+        const city = analysis.city || detectCity(matchTokens);
 
         await prisma.wpPage.upsert({
           where: { siteId_wpId_wpType: { siteId: site.id, wpId: item.id, wpType } },
@@ -143,7 +144,7 @@ export async function syncPages(site: Site): Promise<number> {
             status: item.status || "publish",
             currentFeaturedMediaId: item.featured_media || null,
             niche: analysis.niche !== "other" ? analysis.niche : null,
-            city: analysis.city,
+            city,
             pageIntent: analysis.pageIntent,
             matchTokens,
           },
@@ -155,6 +156,8 @@ export async function syncPages(site: Site): Promise<number> {
             excerpt: excerpt || null,
             status: item.status || "publish",
             currentFeaturedMediaId: item.featured_media || null,
+            niche: analysis.niche !== "other" ? analysis.niche : null,
+            city,
             matchTokens,
           },
         });

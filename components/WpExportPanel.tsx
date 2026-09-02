@@ -45,7 +45,6 @@ export function WpExportPanel({ siteId, hasCreds }: { siteId: string; hasCreds: 
     setRunning(true);
     setResult(null);
     let success = 0;
-    let failed = 0;
     try {
       // Batch loop: keep going until nothing is pending or a batch makes no progress.
       for (let i = 0; i < 200; i++) {
@@ -55,19 +54,19 @@ export function WpExportPanel({ siteId, hasCreds }: { siteId: string; hasCreds: 
           body: JSON.stringify({ limit: BATCH_SIZE }),
         });
         const json = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          failed += 1;
-          break;
-        }
+        if (!res.ok) break;
         success += json.success ?? 0;
-        failed += json.failed ?? 0;
         if ((json.success ?? 0) + (json.failed ?? 0) === 0) break; // nothing left
         if ((json.success ?? 0) === 0) break; // only failures left — stop looping
       }
     } finally {
       setRunning(false);
-      setResult({ success, failed });
-      refresh();
+      // Failures = assignments still carrying an export error, not per-batch
+      // sums (a failing page would otherwise be counted once per batch).
+      const res = await fetch(`/api/sites/${siteId}/export/status`, { cache: "no-store" });
+      const json = res.ok ? ((await res.json()) as ExportStatusDto) : null;
+      if (json) setStatus(json);
+      setResult({ success, failed: json?.errors.length ?? 0 });
     }
   }
 

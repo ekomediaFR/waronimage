@@ -99,13 +99,22 @@ export function WpReviewPanel({ siteId }: { siteId: string }) {
 
   async function openSwap(assignment: WpAssignmentDto) {
     setSwapFor(assignment);
-    if (!mediaList) {
-      const res = await fetch(`/api/sites/${siteId}/wp-overview`, { cache: "no-store" });
-      if (res.ok) {
-        const json = (await res.json()) as WpOverviewDto;
-        setMediaList(json.media);
+    if (mediaList) return;
+    // One retry — then surface the failure instead of silently doing nothing.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await fetch(`/api/sites/${siteId}/wp-overview`, { cache: "no-store" });
+        if (res.ok) {
+          const json = (await res.json()) as WpOverviewDto;
+          setMediaList(json.media);
+          return;
+        }
+      } catch {
+        /* retry */
       }
     }
+    setSwapFor(null);
+    setMessage(dict.syncTab.loadFailed);
   }
 
   const filters: { key: Filter; label: string }[] = [

@@ -5,7 +5,7 @@
 
 import type { WpMedia, WpPage } from "@prisma/client";
 import { prisma } from "./prisma";
-import { generateAssignmentSeoMeta } from "./seoMeta";
+import { generateAssignmentSeoMeta, nicheKeywords } from "./seoMeta";
 
 export const AUTO_APPROVE_THRESHOLD = 0.65;
 
@@ -37,30 +37,42 @@ export function computeScore(
   page: Pick<WpPage, "slug" | "city" | "niche">,
   media: Pick<WpMedia, "filename" | "matchTokens">
 ): Score {
-  // Jaccard similarity between the two token sets
+  // Text similarity: overlap coefficient blended with Jaccard. Pure Jaccard
+  // punishes the length asymmetry between a page (title+excerpt) and an image
+  // (short ALT/filename) so hard that even perfect matches never reach the
+  // 0.65 auto-approve threshold; the overlap coefficient restores that.
   const intersection = [...pageTokens].filter((t) => mediaTokens.has(t));
   const union = new Set([...pageTokens, ...mediaTokens]);
   const jaccard = union.size > 0 ? intersection.length / union.size : 0;
+  const minSize = Math.min(pageTokens.size, mediaTokens.size);
+  const overlap = minSize > 0 ? intersection.length / minSize : 0;
+  const textScore = 0.7 * overlap + 0.3 * jaccard;
 
-  // Bonus: a slug word appears in the media filename
+  const mediaText = (media.matchTokens || "").toLowerCase();
+
+  // Bonus: a slug word appears in the media filename or its metadata tokens
   const pageSlugWords = page.slug.split("-").filter((w) => w.length > 3);
   const mediaFilenameClean = (media.filename || "")
     .toLowerCase()
     .replace(/\.\w+$/, "")
     .replace(/[-_]/g, " ");
-  const slugBonus = pageSlugWords.some((w) => mediaFilenameClean.includes(w)) ? 0.15 : 0;
+  const slugBonus = pageSlugWords.some((w) => mediaFilenameClean.includes(w) || mediaText.includes(w))
+    ? 0.15
+    : 0;
 
   // Bonus: city match
-  const mediaText = (media.matchTokens || "").toLowerCase();
   const cityBonus = page.city && mediaText.includes(page.city.toLowerCase()) ? 0.1 : 0;
 
-  // Bonus: niche match
-  const nicheBonus = page.niche && mediaText.includes(page.niche.toLowerCase()) ? 0.1 : 0;
+  // Bonus: niche match — via the niche's keyword hints in both languages
+  // (page.niche holds the internal key like "moving"; media text is French).
+  const nicheBonus =
+    page.niche && nicheKeywords(page.niche).some((k) => mediaText.includes(k)) ? 0.1 : 0;
 
-  const total = Math.min(1.0, jaccard + slugBonus + cityBonus + nicheBonus);
+  const total = Math.min(1.0, textScore + slugBonus + cityBonus + nicheBonus);
 
   const reason = [
-    `jaccard:${jaccard.toFixed(2)}`,
+    `text:${textScore.toFixed(2)}`,
+    `(overlap:${overlap.toFixed(2)} jaccard:${jaccard.toFixed(2)})`,
     slugBonus > 0 ? `slug:+${slugBonus}` : null,
     cityBonus > 0 ? `city:+${cityBonus}` : null,
     nicheBonus > 0 ? `niche:+${nicheBonus}` : null,
@@ -90,7 +102,7 @@ export async function runMatching(siteId: string): Promise<MatchRunResult> {
     prisma.wpMedia.findMany({ where: { siteId, isUsable: true } }),
     prisma.assignment.findMany({
       where: { siteId, assignmentType: "featured", galleryPosition: 0 },
-      select: { pageId: true, mediaId: true, assignedBy: true },
+      select: { pageId: true, mediaId: true, assignedBy: true, approved: true },
     }),
   ]);
 
@@ -158,10 +170,12 @@ export async function runMatching(siteId: string): Promise<MatchRunResult> {
             seoFilename: seo.seoFilename,
           }
         : {
-            // Same media as before — refresh the score, keep the reviewer's
-            // approval, edits and export status intact.
+            // Same media as before — refresh the score and upgrade the approval
+            // when it now clears the threshold. Never downgrade one the reviewer
+            // (or a previous run) granted; edits and export status stay intact.
             matchScore: best.score.total,
             matchReason: best.score.reason,
+            ...(approved && !prior?.approved ? { approved: true } : {}),
           },
     });
 

@@ -174,6 +174,13 @@ const KNOWN_CITIES = [
   "toulon", "angers", "dijon", "reims", "villeurbanne", "clermont-ferrand",
 ];
 
+/** All keywords (FR + EN) associated with a niche key, for cross-language matching. */
+export function nicheKeywords(nicheKey: string): string[] {
+  const hints = NICHE_HINTS[nicheKey] || [];
+  const label = NICHE_LABELS_FR[nicheKey];
+  return [nicheKey.toLowerCase(), ...(label ? [kebab(label)] : []), ...hints];
+}
+
 /** Niche key from a token string, using the same hints as page analysis. */
 export function detectNiche(tokens: string): string | null {
   const lower = tokens.toLowerCase();
