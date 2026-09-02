@@ -10,10 +10,13 @@ export function SiteTabs({ siteId }: { siteId: string }) {
   const { dict } = useI18n();
 
   const tabs = [
+    { slug: "sync", label: dict.tabs.sync },
+    { slug: "review", label: dict.tabs.review },
+    { slug: "wp-export", label: dict.tabs.wpExport },
+    { slug: "wp-library", label: dict.tabs.wpLibrary },
     { slug: "pages", label: dict.tabs.pages },
     { slug: "ai-images", label: dict.tabs.ai },
     { slug: "stock", label: dict.tabs.stock },
-    { slug: "wp-library", label: dict.tabs.wpLibrary },
     { slug: "export", label: dict.tabs.export },
   ];
 

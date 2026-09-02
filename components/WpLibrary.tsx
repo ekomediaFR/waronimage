@@ -96,7 +96,7 @@ export function WpLibrary({ siteId, initialWpApiUrl }: { siteId: string; initial
                 <Input required value={key} onChange={(e) => setKey(e.target.value)} placeholder="xxxx xxxx xxxx xxxx xxxx xxxx" />
               </div>
               <div>
-                <Label>{dict.newSite.wpApiUrl}</Label>
+                <Label>{dict.newSite.wpUrl}</Label>
                 <Input value={apiUrl} onChange={(e) => setApiUrl(e.target.value)} placeholder="https://example.fr/wp-json" />
               </div>
               <div className="flex items-center gap-3">

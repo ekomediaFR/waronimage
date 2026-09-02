@@ -1,4 +1,4 @@
-import { SitemapIngester } from "@/components/SitemapIngester";
+import { WpSiteForm } from "@/components/WpSiteForm";
 import { getDict } from "@/lib/i18n-server";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export default function NewSitePage() {
         <h1 className="text-2xl font-bold tracking-tight">{dict.newSite.title}</h1>
         <p className="mt-1 text-sm text-zinc-400">{dict.newSite.subtitle}</p>
       </div>
-      <SitemapIngester />
+      <WpSiteForm />
     </div>
   );
 }

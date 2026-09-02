@@ -13,7 +13,11 @@ export default async function HomePage() {
     () =>
       prisma.site.findMany({
         orderBy: { createdAt: "desc" },
-        include: { _count: { select: { pages: true, stockImages: true } } },
+        include: {
+          _count: {
+            select: { pages: true, stockImages: true, wpPages: true, wpMedia: true, assignments: true },
+          },
+        },
       }),
     null
   );
@@ -44,16 +48,22 @@ export default async function HomePage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sites.map((site) => (
-            <Link key={site.id} href={`/sites/${site.id}/pages`}>
+            <Link key={site.id} href={`/sites/${site.id}/sync`}>
               <Card className="transition-colors hover:border-amber-600/60">
                 <CardHeader>
                   <CardTitle className="text-zinc-100 normal-case tracking-normal text-base">{site.name}</CardTitle>
                   <p className="text-xs text-zinc-500">{site.domain}</p>
                 </CardHeader>
-                <CardContent className="flex gap-2">
-                  <Badge>{fmt(dict.home.pagesCount, { n: site._count.pages })}</Badge>
-                  <Badge>{fmt(dict.home.stockCount, { n: site._count.stockImages })}</Badge>
-                  {site.wpApiUrl && <Badge variant="blue">{dict.common.wpConnected}</Badge>}
+                <CardContent className="flex flex-wrap gap-2">
+                  <Badge variant="blue">{fmt(dict.home.wpPages, { n: site._count.wpPages })}</Badge>
+                  <Badge variant="blue">{fmt(dict.home.wpMedia, { n: site._count.wpMedia })}</Badge>
+                  {site._count.pages > 0 && <Badge>{fmt(dict.home.pagesCount, { n: site._count.pages })}</Badge>}
+                  {site._count.stockImages > 0 && (
+                    <Badge>{fmt(dict.home.stockCount, { n: site._count.stockImages })}</Badge>
+                  )}
+                  {(site.wpApiUrl || site.wpAppPassword || site.wpJwtToken || site.wpAuthToken) && (
+                    <Badge variant="green">{dict.common.wpConnected}</Badge>
+                  )}
                 </CardContent>
               </Card>
             </Link>

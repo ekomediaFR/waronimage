@@ -209,10 +209,7 @@ interface AssignmentSeoPage {
 }
 
 /** Rule-based SEO metadata for a media ↔ page assignment (French output). */
-export function generateAssignmentSeoMeta(
-  page: AssignmentSeoPage,
-  _media: { filename?: string | null }
-): AssignmentSeoMeta {
+export function generateAssignmentSeoMeta(page: AssignmentSeoPage): AssignmentSeoMeta {
   const nicheKey = page.niche || detectNiche(page.matchTokens || "");
   const nicheFr = nicheKey ? NICHE_LABELS_FR[nicheKey] || nicheKey : null;
   const cityRaw = page.city || detectCity(page.matchTokens || "");

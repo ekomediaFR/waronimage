@@ -116,7 +116,7 @@ export async function runMatching(siteId: string): Promise<MatchRunResult> {
     if (!best) continue;
 
     const approved = best.score.total >= AUTO_APPROVE_THRESHOLD;
-    const seo = generateAssignmentSeoMeta(page, best.media);
+    const seo = generateAssignmentSeoMeta(page);
     const mediaChanged = prior ? prior.mediaId !== best.media.id : false;
 
     await prisma.assignment.upsert({
