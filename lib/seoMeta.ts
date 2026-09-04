@@ -1,4 +1,5 @@
 import { chatJSON, hasOpenAI } from "./openai";
+import { truncateSafe } from "./utils";
 
 export interface PageAnalysis {
   pageIntent: string;
@@ -265,7 +266,9 @@ function sanitizeFilename(name?: string): string | null {
 }
 
 function truncate(s: string, max: number): string {
-  return s.length <= max ? s : s.slice(0, max - 1).trimEnd() + "…";
+  // truncateSafe never splits a surrogate pair and strips control chars /
+  // lone surrogates, so the result is always safe to persist through Prisma.
+  return truncateSafe(s, max);
 }
 
 function cap(s: string): string {

@@ -1,14 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { apiError } from "@/lib/apiErrors";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const sites = await prisma.site.findMany({
-    orderBy: { createdAt: "desc" },
-    include: { _count: { select: { pages: true, stockImages: true, wpPages: true, wpMedia: true, assignments: true } } },
-  });
-  return NextResponse.json({ sites });
+  try {
+    const sites = await prisma.site.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        _count: { select: { pages: true, stockImages: true, wpPages: true, wpMedia: true, assignments: true } },
+      },
+    });
+    return NextResponse.json({ sites });
+  } catch (err) {
+    return apiError(err);
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -40,25 +47,29 @@ export async function POST(req: NextRequest) {
     wpAuthToken: wpAuthToken || null,
     language: language || "fr",
   };
-  const site = await prisma.site.upsert({
-    where: { domain },
-    create: {
-      name,
-      domain,
-      sitemapUrl: sitemapUrl || null,
-      brandColors: brandColors ?? undefined,
-      fontStyle: fontStyle ?? "sans",
-      logoUrl,
-      ...wpFields,
-    },
-    update: {
-      name,
-      ...(sitemapUrl !== undefined ? { sitemapUrl: sitemapUrl || null } : {}),
-      ...(brandColors !== undefined ? { brandColors } : {}),
-      ...(fontStyle !== undefined ? { fontStyle } : {}),
-      ...(logoUrl !== undefined ? { logoUrl } : {}),
-      ...wpFields,
-    },
-  });
-  return NextResponse.json({ site }, { status: 201 });
+  try {
+    const site = await prisma.site.upsert({
+      where: { domain },
+      create: {
+        name,
+        domain,
+        sitemapUrl: sitemapUrl || null,
+        brandColors: brandColors ?? undefined,
+        fontStyle: fontStyle ?? "sans",
+        logoUrl,
+        ...wpFields,
+      },
+      update: {
+        name,
+        ...(sitemapUrl !== undefined ? { sitemapUrl: sitemapUrl || null } : {}),
+        ...(brandColors !== undefined ? { brandColors } : {}),
+        ...(fontStyle !== undefined ? { fontStyle } : {}),
+        ...(logoUrl !== undefined ? { logoUrl } : {}),
+        ...wpFields,
+      },
+    });
+    return NextResponse.json({ site }, { status: 201 });
+  } catch (err) {
+    return apiError(err);
+  }
 }

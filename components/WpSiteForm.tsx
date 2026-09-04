@@ -10,6 +10,7 @@ import { Input, Label, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/LanguageProvider";
 import { fmt } from "@/lib/i18n";
+import { fetchJson } from "@/lib/utils";
 import type { WpConnectionTestDto } from "@/lib/types";
 
 export function WpSiteForm() {
@@ -57,13 +58,21 @@ export function WpSiteForm() {
     setTesting(true);
     setTestResult(null);
     try {
-      const res = await fetch("/api/sites/test-connection", {
+      const json = await fetchJson<WpConnectionTestDto>("/api/sites/test-connection", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(credentialPayload()),
       });
-      const json = (await res.json()) as WpConnectionTestDto & { error?: string };
-      if (json.ok && json.authenticated) {
+      if (json.ok && json.authenticated && json.via === "bridge") {
+        setTestResult({
+          kind: "ok",
+          text: fmt(dict.newSite.connOkBridge, {
+            name: json.siteName ? ` (${json.siteName})` : "",
+            v: json.bridgeVersion || "?",
+            media: json.mediaCount ?? "?",
+          }),
+        });
+      } else if (json.ok && json.authenticated) {
         setTestResult({
           kind: "ok",
           text: fmt(dict.newSite.connOkAuth, {
@@ -90,7 +99,7 @@ export function WpSiteForm() {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch("/api/sites", {
+      const json = await fetchJson<{ site: { id: string } }>("/api/sites", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -102,9 +111,7 @@ export function WpSiteForm() {
           ...credentialPayload(),
         }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
-      const siteId = json.site.id as string;
+      const siteId = json.site.id;
 
       if (form.sitemapUrl.trim()) {
         setStatusMsg(dict.newSite.ingestingMsg);

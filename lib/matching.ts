@@ -6,6 +6,7 @@
 import type { WpMedia, WpPage } from "@prisma/client";
 import { prisma } from "./prisma";
 import { generateAssignmentSeoMeta, nicheKeywords } from "./seoMeta";
+import { sanitizeText } from "./utils";
 
 export const AUTO_APPROVE_THRESHOLD = 0.65;
 
@@ -80,8 +81,9 @@ export function computeScore(
   ]
     .filter(Boolean)
     .join(" ");
-
-  return { total, reason };
+  // Tokens come from WP text; a matched token can carry a lone surrogate that
+  // would break the Prisma query engine when written as matchReason.
+  return { total, reason: sanitizeText(reason) };
 }
 
 export interface MatchRunResult {

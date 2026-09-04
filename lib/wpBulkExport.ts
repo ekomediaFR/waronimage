@@ -4,7 +4,8 @@
 
 import type { Assignment, Site, WpMedia, WpPage } from "@prisma/client";
 import { prisma } from "./prisma";
-import { buildAuthHeaders, getRestBase, hasWpCredentials, wpFetch, wpV2Base } from "./wpRest";
+import { buildAuthHeaders, getRestBase, hasWpCredentials, isJupiterKey, wpFetch, wpV2Base } from "./wpRest";
+import { setWpFeatured, updateWpImage } from "./wpPlugin";
 import { finishSyncLog, startSyncLog } from "./wpSync";
 
 export type FullAssignment = Assignment & { page: WpPage; media: WpMedia };
@@ -20,15 +21,46 @@ export async function exportAssignment(site: Site, assignment: FullAssignment): 
   if (!hasWpCredentials(site)) {
     throw new Error("No WordPress credentials on this site — add them in the site settings.");
   }
-  const headers = buildAuthHeaders(site);
-  const v2 = wpV2Base(site);
 
-  // 1. SEO metadata on the media item (plain strings — WP casts them to raw content).
+  // JUPITER keys (ekoseo_bot) have no core wp/v2 edit caps — write via the bridge.
+  if (isJupiterKey(site)) {
+    await exportViaBridge(site, assignment);
+  } else {
+    try {
+      await exportViaCore(site, assignment);
+    } catch (err) {
+      // Core said "no rights" but a bridge token exists — try the bridge channel.
+      const msg = (err as Error).message;
+      if (site.wpAuthToken?.trim() && /WP (401|403)/.test(msg)) {
+        await exportViaBridge(site, assignment);
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  await prisma.assignment.update({
+    where: { id: assignment.id },
+    data: { exported: true, exportedAt: new Date(), exportError: null },
+  });
+}
+
+function seoMetaBody(assignment: FullAssignment): Record<string, string> {
   const metaBody: Record<string, string> = {};
   if (assignment.seoAltText) metaBody.alt_text = assignment.seoAltText;
   if (assignment.seoTitle) metaBody.title = assignment.seoTitle;
   if (assignment.seoCaption) metaBody.caption = assignment.seoCaption;
   if (assignment.seoDescription) metaBody.description = assignment.seoDescription;
+  return metaBody;
+}
+
+/** Standard channel: core wp/v2 endpoints with the site credentials. */
+async function exportViaCore(site: Site, assignment: FullAssignment): Promise<void> {
+  const headers = buildAuthHeaders(site);
+  const v2 = wpV2Base(site);
+
+  // 1. SEO metadata on the media item (plain strings — WP casts them to raw content).
+  const metaBody = seoMetaBody(assignment);
   if (Object.keys(metaBody).length > 0) {
     const metaRes = await wpFetch(`${v2}/media/${assignment.media.wpId}`, {
       method: "POST",
@@ -52,12 +84,31 @@ export async function exportAssignment(site: Site, assignment: FullAssignment): 
     const err = await featRes.text().catch(() => "");
     throw new Error(`featured image update failed — WP ${featRes.status}: ${err.slice(0, 200)}`);
   }
+}
 
-  // 3. Mark exported.
-  await prisma.assignment.update({
-    where: { id: assignment.id },
-    data: { exported: true, exportedAt: new Date(), exportError: null },
-  });
+/** EkoSEO Bridge channel: /ekoseo/v1 media + featured endpoints (ekoseo_bot rights). */
+async function exportViaBridge(site: Site, assignment: FullAssignment): Promise<void> {
+  const pluginSite = { domain: site.domain, wpApiUrl: site.wpApiUrl, wpAuthToken: site.wpAuthToken };
+
+  const metaBody = seoMetaBody(assignment);
+  if (Object.keys(metaBody).length > 0) {
+    try {
+      await updateWpImage(pluginSite, assignment.media.wpId, {
+        alt: metaBody.alt_text,
+        title: metaBody.title,
+        caption: metaBody.caption,
+        description: metaBody.description,
+      });
+    } catch (err) {
+      throw new Error(`media metadata update failed (bridge) — ${(err as Error).message.slice(0, 200)}`);
+    }
+  }
+
+  try {
+    await setWpFeatured(pluginSite, assignment.page.wpId, assignment.media.wpId);
+  } catch (err) {
+    throw new Error(`featured image update failed (bridge) — ${(err as Error).message.slice(0, 200)}`);
+  }
 }
 
 /**

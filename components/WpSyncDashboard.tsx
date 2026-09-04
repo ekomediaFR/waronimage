@@ -13,6 +13,7 @@ import { MatchScoreBadge } from "@/components/MatchScoreBadge";
 import { SyncButton } from "@/components/SyncButton";
 import { useI18n } from "@/components/LanguageProvider";
 import { fmt } from "@/lib/i18n";
+import { fetchJson } from "@/lib/utils";
 import type { WpConnectionTestDto, WpOverviewDto } from "@/lib/types";
 
 export function WpSyncDashboard({ siteId, hasCreds }: { siteId: string; hasCreds: boolean }) {
@@ -27,9 +28,7 @@ export function WpSyncDashboard({ siteId, hasCreds }: { siteId: string; hasCreds
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`/api/sites/${siteId}/wp-overview`, { cache: "no-store" });
-      if (!res.ok) throw new Error("load failed");
-      setData((await res.json()) as WpOverviewDto);
+      setData(await fetchJson<WpOverviewDto>(`/api/sites/${siteId}/wp-overview`, { cache: "no-store" }));
       setLoadError(false);
     } catch {
       setLoadError(true);
@@ -58,9 +57,12 @@ export function WpSyncDashboard({ siteId, hasCreds }: { siteId: string; hasCreds
     setMessage(null);
     setError(null);
     try {
-      const res = await fetch(`/api/sites/${siteId}/test-connection`, { method: "POST" });
-      const json = (await res.json()) as WpConnectionTestDto;
-      if (json.ok && json.authenticated) setMessage(dict.syncTab.connOkAuth);
+      const json = await fetchJson<WpConnectionTestDto>(`/api/sites/${siteId}/test-connection`, {
+        method: "POST",
+      });
+      if (json.ok && json.authenticated && json.via === "bridge")
+        setMessage(fmt(dict.syncTab.connOkBridge, { v: json.bridgeVersion || "?" }));
+      else if (json.ok && json.authenticated) setMessage(dict.syncTab.connOkAuth);
       else if (json.ok) setMessage(fmt(dict.syncTab.connOkRead, { err: json.error || "" }));
       else setError(fmt(dict.syncTab.connFail, { err: json.error || "" }));
     } catch (err) {

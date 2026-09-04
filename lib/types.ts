@@ -123,6 +123,8 @@ export interface WpAssignmentDto {
 export interface WpConnectionTestDto {
   ok: boolean;
   authenticated: boolean;
+  via?: "core" | "bridge" | null;
+  bridgeVersion?: string | null;
   siteName: string | null;
   wpUrl: string;
   postTypes: string[];

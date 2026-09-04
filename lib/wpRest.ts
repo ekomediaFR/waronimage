@@ -71,6 +71,19 @@ export function hasWpCredentials(site: WpAuthSite): boolean {
   return authorizationValue(site) !== null;
 }
 
+/**
+ * True when the site authenticates with a bare EkoSEO Bridge JUPITER key —
+ * an application password on the ekoseo_bot account whose custom role has NO
+ * core wp/v2 edit capabilities. Reads still work; writes must go through the
+ * bridge namespace (lib/wpPlugin.ts).
+ */
+export function isJupiterKey(site: WpAuthSite): boolean {
+  if (site.wpAuthMethod === "app-password" && site.wpAppUser && site.wpAppPassword) return false;
+  if (site.wpAuthMethod === "jwt" && site.wpJwtToken?.trim()) return false;
+  const legacy = site.wpAuthToken?.trim();
+  return !!legacy && !legacy.includes(":") && legacy.split(".").length !== 3;
+}
+
 /** fetch with sane defaults for WP REST calls (30 s timeout, no cache). */
 export function wpFetch(url: string, init?: RequestInit): Promise<Response> {
   return fetch(url, {
@@ -96,6 +109,8 @@ export interface WpTypeInfo {
 export interface WpConnectionTest {
   ok: boolean;
   authenticated: boolean;
+  via: "core" | "bridge" | null; // which channel grants write access
+  bridgeVersion: string | null;
   siteName: string | null;
   wpUrl: string;
   postTypes: string[];
@@ -115,6 +130,8 @@ export async function testWpConnection(site: WpAuthSite): Promise<WpConnectionTe
   const result: WpConnectionTest = {
     ok: false,
     authenticated: false,
+    via: null,
+    bridgeVersion: null,
     siteName: null,
     wpUrl: root,
     postTypes: [],
@@ -135,17 +152,36 @@ export async function testWpConnection(site: WpAuthSite): Promise<WpConnectionTe
     if (editRes.ok) {
       result.ok = true;
       result.authenticated = true;
+      result.via = "core";
       result.pagesCount = parseInt(editRes.headers.get("X-WP-Total") || "0", 10) || null;
     } else {
       const readRes = await wpFetch(`${v2}/pages?per_page=1`, { headers });
       if (readRes.ok) {
-        result.ok = true; // reachable, but read-only
+        result.ok = true; // reachable — maybe read-only, maybe bridge-writable
         result.pagesCount = parseInt(readRes.headers.get("X-WP-Total") || "0", 10) || null;
         const detail = (await editRes.json().catch(() => null)) as { message?: string } | null;
         result.error = detail?.message || `Auth check failed (HTTP ${editRes.status}) — read-only access.`;
       } else {
         result.error = `WP REST API unreachable (HTTP ${readRes.status}).`;
         return result;
+      }
+
+      // JUPITER keys have no core edit caps by design — writes go through the
+      // EkoSEO Bridge namespace instead. If the bridge answers, that IS write access.
+      if (isJupiterKey(site)) {
+        const { pingPlugin } = await import("./wpPlugin");
+        const bridge = await pingPlugin({
+          domain: site.domain,
+          wpApiUrl: site.wpApiUrl,
+          wpAuthToken: site.wpAuthToken,
+        });
+        if (bridge) {
+          result.authenticated = true;
+          result.via = "bridge";
+          result.bridgeVersion = bridge.plugin_version || null;
+          result.error = null;
+          if (result.mediaCount === null && bridge.image_count) result.mediaCount = bridge.image_count;
+        }
       }
     }
 
